@@ -7,6 +7,7 @@ import { PageLoader } from '../components/ui/Spinner'
 import { getClient, getClientDocuments, deleteClient } from '../services/clients'
 import { formatDate } from '../utils/formatDate'
 import { useDateFormat } from '../hooks/useProfile'
+import { useAlertModal } from '../hooks/useAlertModal'
 import { symbolFor } from '../constants/currencies'
 import type { Client } from '../types/database'
 
@@ -14,6 +15,7 @@ export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const dateFormat = useDateFormat()
+  const { showError, askConfirm, AlertHost } = useAlertModal()
   const [client, setClient] = useState<Client | null>(null)
   const [docs, setDocs] = useState<Array<{ id: string; document_number: string; total_amount: number; currency: string; issue_date: string }>>([])
   const [loading, setLoading] = useState(true)
@@ -27,10 +29,23 @@ export default function ClientDetailPage() {
     })
   }, [id])
 
-  const handleDelete = async () => {
-    if (!id || !confirm('Delete this client?')) return
-    await deleteClient(id)
-    navigate('/clients')
+  const handleDelete = () => {
+    if (!id) return
+    askConfirm({
+      tone: 'danger',
+      title: 'Delete client?',
+      message: 'This client will be removed. Documents linked to them are not deleted.',
+      confirmLabel: 'Delete client',
+      icon: Trash2,
+      onConfirm: async () => {
+        const { error } = await deleteClient(id)
+        if (error) {
+          showError('Could not delete client', error.message)
+          return
+        }
+        navigate('/clients')
+      },
+    })
   }
 
   if (loading) return <AppShell><PageLoader /></AppShell>
@@ -76,6 +91,7 @@ export default function ClientDetailPage() {
           ))
         )}
       </div>
+      {AlertHost}
     </AppShell>
   )
 }

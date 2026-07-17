@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Globe, Info, Lock, Pencil } from 'lucide-react'
 import { AppShell } from '../../components/layout/AppShell'
@@ -15,11 +15,12 @@ import { SaveShareModal } from '../../components/documents/SaveShareModal'
 import { clearDraft, loadDraft, saveDraft } from '../../hooks/useDocumentDraft'
 import { useAuth } from '../../context/AuthContext'
 import { useProfile, useDateFormat } from '../../hooks/useProfile'
+import { useAlertModal } from '../../hooks/useAlertModal'
 import { getTemplates } from '../../services/documents'
 import { buildDocumentHtml, printDocumentPdf } from '../../services/documentHtml'
 import { enrichDocWithProfileLogo } from '../../utils/documentLogo'
 import { saveDocumentFromDraft } from '../../utils/saveDocument'
-import type { DocumentType, Template } from '../../types/database'
+import type { DocumentType, DocumentWithDetails, Template } from '../../types/database'
 
 export default function DocumentPreviewPage() {
   const { type } = useParams<{ type: DocumentType }>()
@@ -27,10 +28,12 @@ export default function DocumentPreviewPage() {
   const { user } = useAuth()
   const { profile } = useProfile()
   const dateFormat = useDateFormat()
+  const { showError, AlertHost } = useAlertModal()
   const [draft, setDraft] = useState(loadDraft())
   const [template, setTemplate] = useState<Template | null>(null)
+  const [previewDoc, setPreviewDoc] = useState<DocumentWithDetails | null>(null)
+  const [html, setHtml] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
   const [savedId, setSavedId] = useState<string | null>(null)
   const [savedSlug, setSavedSlug] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
@@ -46,15 +49,26 @@ export default function DocumentPreviewPage() {
     })
   }, [draft, type, navigate])
 
-  const previewDoc = useMemo(() => {
-    if (!draft || !template || !profile) return null
-    return buildPreviewDocFromDraft(draft, profile, template)
-  }, [draft, template, profile])
+  useEffect(() => {
+    if (!draft || !template || !profile) {
+      setPreviewDoc(null)
+      setHtml(null)
+      return
+    }
 
-  const html = useMemo(() => {
-    if (!previewDoc) return null
-    return buildDocumentHtml(previewDoc, dateFormat)
-  }, [previewDoc, dateFormat])
+    let cancelled = false
+    const build = async () => {
+      let doc = buildPreviewDocFromDraft(draft, profile, template)
+      if (user) doc = await enrichDocWithProfileLogo(doc, user.id)
+      if (cancelled) return
+      setPreviewDoc(doc)
+      setHtml(buildDocumentHtml(doc, dateFormat))
+    }
+    build()
+    return () => {
+      cancelled = true
+    }
+  }, [draft, template, profile, user, dateFormat])
 
   const updateDraft = (patch: Partial<NonNullable<typeof draft>>) => {
     if (!draft) return
@@ -66,7 +80,6 @@ export default function DocumentPreviewPage() {
   const handleSave = async () => {
     if (!user || !draft) return
     setSaving(true)
-    setError('')
     try {
       const doc = await saveDocumentFromDraft(draft, user, profile)
       clearDraft()
@@ -74,14 +87,17 @@ export default function DocumentPreviewPage() {
       setSavedSlug(doc!.public_slug ?? null)
       setShowModal(true)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save document')
+      showError(
+        'Could not save document',
+        e instanceof Error ? e.message : 'Something went wrong while saving. Please try again.',
+      )
     } finally {
       setSaving(false)
     }
   }
 
   const handleDownload = async () => {
-    if (!previewDoc || !user || !html) return
+    if (!previewDoc || !user) return
     const enriched = await enrichDocWithProfileLogo(previewDoc, user.id)
     const enrichedHtml = buildDocumentHtml(enriched, dateFormat)
     if (enrichedHtml) printDocumentPdf(enrichedHtml, previewDoc.document_number)
@@ -111,7 +127,6 @@ export default function DocumentPreviewPage() {
             </div>
           </div>
 
-          {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
           {html ? <DocumentHtmlPreview html={html} /> : <PageLoader />}
         </div>
 
@@ -166,6 +181,7 @@ export default function DocumentPreviewPage() {
           />
         )}
       </Modal>
+      {AlertHost}
     </AppShell>
   )
 }

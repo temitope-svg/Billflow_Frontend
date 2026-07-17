@@ -14,6 +14,19 @@ const AuthContext = createContext<AuthContextValue>({
   loading: true,
 })
 
+function clearAllProfilePromptFlags() {
+  try {
+    const keysToRemove: string[] = []
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const key = sessionStorage.key(i)
+      if (key?.startsWith('bf_profile_prompt_shown_')) keysToRemove.push(key)
+    }
+    keysToRemove.forEach((k) => sessionStorage.removeItem(k))
+  } catch {
+    // ignore
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
@@ -26,7 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') clearAllProfilePromptFlags()
       setSession(session)
       setLoading(false)
     })

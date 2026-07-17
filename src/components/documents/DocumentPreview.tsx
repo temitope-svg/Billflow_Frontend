@@ -1,22 +1,30 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { DocumentWithDetails } from '../../types/database'
 import { symbolFor } from '../../constants/currencies'
 import { formatDate } from '../../utils/formatDate'
 import type { DateFormatKey } from '../../utils/formatDate'
-import { lineItemTotal } from '../../utils/lineItems'
+import { lineItemTotal, parseUnitField } from '../../utils/lineItems'
 import type { DocumentDraft } from '../../hooks/useDocumentDraft'
+
+// A4 at 96dpi (210mm) — same intrinsic width the PDF templates are authored for.
+const PAGE_WIDTH_PX = 794
 
 export function DocumentMiniPreview({
   draft,
   businessName,
+  logoUrl,
+  currency,
   documentNumber = 'DRAFT',
   dateFormat = 'DD/MM/YYYY',
 }: {
   draft: DocumentDraft
   businessName: string
+  logoUrl?: string | null
+  currency?: string | null
   documentNumber?: string
   dateFormat?: DateFormatKey
 }) {
-  const symbol = symbolFor()
+  const symbol = symbolFor(currency)
   const subtotal = draft.lineItems.reduce(
     (sum, item) => sum + lineItemTotal(item.unit, item.unitPrice),
     0,
@@ -31,7 +39,17 @@ export function DocumentMiniPreview({
     <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs">
       <div className="mb-2 flex justify-between">
         <div>
-          <div className="mb-1 h-5 w-5 rounded bg-brand" />
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={businessName || 'Business logo'}
+              className="mb-1 h-8 w-8 rounded object-contain"
+            />
+          ) : (
+            <div className="mb-1 flex h-8 w-8 items-center justify-center rounded bg-brand text-[10px] font-bold text-white">
+              {(businessName || 'B').charAt(0).toUpperCase()}
+            </div>
+          )}
           <div className="font-semibold text-slate-900">{businessName || 'Your business'}</div>
         </div>
         <div className="text-right">
@@ -74,12 +92,52 @@ export function DocumentMiniPreview({
 }
 
 export function DocumentHtmlPreview({ html }: { html: string }) {
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const pageRef = useRef<HTMLDivElement>(null)
+  const [scale, setScale] = useState(1)
+  const [pageHeight, setPageHeight] = useState(0)
+
+  useLayoutEffect(() => {
+    const wrap = wrapRef.current
+    if (!wrap) return
+
+    const measure = () => {
+      const available = wrap.clientWidth - 32
+      setScale(Math.min(1, available / PAGE_WIDTH_PX))
+      if (pageRef.current) setPageHeight(pageRef.current.scrollHeight)
+    }
+
+    measure()
+    // Remeasure after images (logo) load so height is accurate
+    const imgs = pageRef.current?.querySelectorAll('img') ?? []
+    imgs.forEach((img) => {
+      if (!img.complete) img.addEventListener('load', measure, { once: true })
+    })
+
+    const ro = new ResizeObserver(measure)
+    ro.observe(wrap)
+    return () => ro.disconnect()
+  }, [html])
+
   return (
-    <div className="overflow-hidden rounded-lg bg-slate-200 p-6">
+    <div ref={wrapRef} className="overflow-hidden rounded-lg bg-slate-200 p-4">
       <div
-        className="mx-auto max-w-[480px] overflow-hidden rounded bg-white shadow-lg"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+        className="relative mx-auto"
+        style={{
+          width: PAGE_WIDTH_PX * scale,
+          height: pageHeight * scale || undefined,
+        }}
+      >
+        <div
+          ref={pageRef}
+          className="absolute top-0 left-0 origin-top-left overflow-hidden rounded bg-white shadow-lg"
+          style={{
+            width: PAGE_WIDTH_PX,
+            transform: `scale(${scale})`,
+          }}
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </div>
     </div>
   )
 }
@@ -162,15 +220,7 @@ export function buildPreviewDocFromDraft(
     line_items: draft.lineItems
       .filter((i) => i.description.trim())
       .map((item, index) => {
-        const { quantity, unit } = (() => {
-          const trimmed = item.unit.trim()
-          if (!trimmed) return { quantity: 1, unit: null as string | null }
-          const asNumber = parseFloat(trimmed)
-          if (!Number.isNaN(asNumber) && String(asNumber) === trimmed) {
-            return { quantity: asNumber, unit: null }
-          }
-          return { quantity: 1, unit: trimmed }
-        })()
+        const { quantity, unit } = parseUnitField(item.unit)
         const unitPrice = parseFloat(item.unitPrice) || 0
         return {
           id: item.id,

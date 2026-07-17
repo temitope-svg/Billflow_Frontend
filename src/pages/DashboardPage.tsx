@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Receipt } from 'lucide-react'
+import { Moon, Sun, Sunset, type LucideIcon } from 'lucide-react'
 import { AppShell } from '../components/layout/AppShell'
+import { DocumentTypeIcon } from '../components/documents/DocumentTypeIcon'
 import { Badge } from '../components/ui/Badge'
 import { PageLoader } from '../components/ui/Spinner'
 import { useAuth } from '../context/AuthContext'
@@ -12,6 +13,37 @@ import { getStatusBadge } from '../utils/documentStatus'
 import { formatDate } from '../utils/formatDate'
 import { useDateFormat } from '../hooks/useProfile'
 import type { DocumentStatus, DocumentType } from '../types/database'
+
+function getGreeting(date = new Date()): {
+  text: string
+  Icon: LucideIcon
+  iconClass: string
+  wrapClass: string
+} {
+  const hour = date.getHours()
+  if (hour < 12) {
+    return {
+      text: 'Good morning',
+      Icon: Sun,
+      iconClass: 'text-amber-500',
+      wrapClass: 'bg-amber-100',
+    }
+  }
+  if (hour < 17) {
+    return {
+      text: 'Good afternoon',
+      Icon: Sunset,
+      iconClass: 'text-orange-500',
+      wrapClass: 'bg-orange-100',
+    }
+  }
+  return {
+    text: 'Good evening',
+    Icon: Moon,
+    iconClass: 'text-indigo-500',
+    wrapClass: 'bg-indigo-50',
+  }
+}
 
 interface RecentDoc {
   id: string
@@ -53,30 +85,53 @@ export default function DashboardPage() {
     })
   }, [user])
 
-  const greeting = () => {
-    const h = new Date().getHours()
-    if (h < 12) return 'Good morning'
-    if (h < 17) return 'Good afternoon'
-    return 'Good evening'
-  }
+  const [greeting, setGreeting] = useState(() => getGreeting())
+
+  useEffect(() => {
+    const syncGreeting = () => setGreeting(getGreeting())
+    syncGreeting()
+
+    const now = new Date()
+    const msUntilNextMinute =
+      (60 - now.getSeconds()) * 1000 - now.getMilliseconds()
+    let intervalId: number | undefined
+    const timeoutId = window.setTimeout(() => {
+      syncGreeting()
+      intervalId = window.setInterval(syncGreeting, 60_000)
+    }, msUntilNextMinute)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+      if (intervalId !== undefined) window.clearInterval(intervalId)
+    }
+  }, [])
 
   const name =
-    profile?.business_name?.split(' ')[0] ??
     user?.user_metadata?.full_name?.split(' ')[0] ??
+    user?.email?.split('@')[0] ??
     'there'
 
   const symbol = symbolFor(profile?.currency)
+  const { text: greetingText, Icon: GreetingIcon, iconClass, wrapClass } = greeting
 
   if (loading) return <AppShell><PageLoader /></AppShell>
 
   return (
     <AppShell>
       <div className="mb-5 flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold text-slate-900">
-            {greeting()}, {name}
-          </h1>
-          <p className="text-xs text-slate-500">Here&apos;s what&apos;s happening with your documents</p>
+        <div className="flex items-start gap-3">
+          <div
+            className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${wrapClass}`}
+            aria-hidden
+          >
+            <GreetingIcon className={`h-4 w-4 ${iconClass}`} />
+          </div>
+          <div>
+            <h1 className="text-lg font-semibold text-slate-900">
+              {greetingText}, {name}
+            </h1>
+            <p className="text-xs text-slate-500">Here&apos;s what&apos;s happening with your documents</p>
+          </div>
         </div>
       </div>
 
@@ -102,9 +157,11 @@ export default function DashboardPage() {
                 to={`/documents/${doc.id}`}
                 className="flex items-center gap-3 border-b border-slate-50 px-4 py-3 last:border-0 hover:bg-slate-50"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50">
-                  <Receipt className="h-4 w-4 text-brand" />
-                </div>
+                <DocumentTypeIcon
+                  type={doc.document_type}
+                  status={doc.status}
+                  dueDate={doc.due_date}
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">
                     {doc.document_number} · {doc.recipient?.name ?? 'No client'}

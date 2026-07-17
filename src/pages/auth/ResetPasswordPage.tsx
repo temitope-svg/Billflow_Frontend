@@ -2,30 +2,33 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AuthShell } from '../../components/layout/AuthShell'
 import { Button } from '../../components/ui/Button'
-import { Input } from '../../components/ui/Input'
+import { PasswordInput } from '../../components/ui/PasswordInput'
+import { useAlertModal } from '../../hooks/useAlertModal'
 import { updatePassword } from '../../services/auth'
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate()
+  const { showSuccess, showError, AlertHost } = useAlertModal()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password !== confirm) {
-      setError('Passwords do not match')
+      showError('Passwords do not match', 'Make sure both password fields are the same.')
       return
     }
     setLoading(true)
     const { error } = await updatePassword(password)
     setLoading(false)
     if (error) {
-      setError(error.message)
+      showError('Could not update password', error.message)
       return
     }
-    navigate('/dashboard')
+    showSuccess('Password updated', 'Your new password has been saved.', () => {
+      navigate('/dashboard')
+    })
   }
 
   return (
@@ -35,13 +38,28 @@ export default function ResetPasswordPage() {
           <h1 className="text-lg font-semibold">Set new password</h1>
           <p className="text-sm text-slate-500">Choose a strong password for your account</p>
         </div>
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
-        <Input label="New password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
-        <Input label="Confirm password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+        <PasswordInput
+          label="New password"
+          placeholder="Min. 8 characters"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          required
+          minLength={6}
+        />
+        <PasswordInput
+          label="Confirm password"
+          placeholder="Re-enter your password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          autoComplete="new-password"
+          required
+        />
         <Button type="submit" fullWidth disabled={loading}>
           {loading ? 'Saving…' : 'Update password'}
         </Button>
       </form>
+      {AlertHost}
     </AuthShell>
   )
 }

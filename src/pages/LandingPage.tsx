@@ -69,7 +69,7 @@ export default function LandingPage() {
           <Link to="/login">
             <Button variant="outline">Log in</Button>
           </Link>
-          <Link to="/register">
+          <Link to="/onboarding">
             <Button>Get started free</Button>
           </Link>
         </div>
@@ -87,7 +87,7 @@ export default function LandingPage() {
           Gmail or any app. Web and mobile.
         </p>
         <div className="mt-6 flex justify-center gap-3">
-          <Link to="/register">
+          <Link to="/onboarding">
             <Button className="px-6 py-2.5">Start for free</Button>
           </Link>
           <a href="#how">
@@ -214,7 +214,7 @@ export default function LandingPage() {
         <h2 className="text-2xl font-semibold">Start billing professionally today</h2>
         <p className="mt-2 text-sm text-slate-500">Free to use. No credit card needed. Web and mobile.</p>
         <div className="mt-6 flex justify-center gap-3">
-          <Link to="/register"><Button className="px-6">Create your account</Button></Link>
+          <Link to="/onboarding"><Button className="px-6">Create your account</Button></Link>
           <Button variant="outline" className="px-6">Download the app</Button>
         </div>
       </section>

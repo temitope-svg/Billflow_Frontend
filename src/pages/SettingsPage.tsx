@@ -1,22 +1,30 @@
 import { useEffect, useState } from 'react'
-import { Building2, PenLine, SlidersHorizontal, LayoutTemplate, LogOut } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { Building2, PenLine, SlidersHorizontal, LayoutTemplate, User, LogOut } from 'lucide-react'
 import { AppShell } from '../components/layout/AppShell'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Textarea } from '../components/ui/Textarea'
+import { PhoneField } from '../components/ui/PhoneField'
 import { Card, SectionHead } from '../components/ui/Card'
-import { PageLoader } from '../components/ui/Spinner'
+import { PageLoader, Spinner } from '../components/ui/Spinner'
+import { AccountSettingsPanel } from '../components/settings/AccountSettingsPanel'
+import { SignatureSettingsPanel } from '../components/settings/SignatureSettingsPanel'
+import { TemplatesSettingsPanel } from '../components/settings/TemplatesSettingsPanel'
 import { useAuth } from '../context/AuthContext'
 import { useProfile } from '../hooks/useProfile'
+import { useAlertModal } from '../hooks/useAlertModal'
 import { updateProfile } from '../services/profile'
-import { uploadLogo, uploadSignature } from '../services/storage'
+import { uploadLogo } from '../services/storage'
 import { signOut } from '../services/auth'
 import { getTemplates } from '../services/documents'
 import { defaultTemplateFieldFor } from '../utils/defaultTemplate'
-import { CURRENCIES } from '../constants/currencies'
+import { CURRENCIES, CURRENCY_SYMBOLS } from '../constants/currencies'
+import { DEFAULT_COUNTRY, splitPhone, type Country } from '../constants/countries'
 import type { DocumentType, Template, UserProfile } from '../types/database'
 
 const tabs = [
+  { id: 'account', label: 'Account settings', icon: User },
   { id: 'business', label: 'Business profile', icon: Building2 },
   { id: 'signature', label: 'Signature', icon: PenLine },
   { id: 'preferences', label: 'Preferences', icon: SlidersHorizontal },
@@ -25,12 +33,30 @@ const tabs = [
 
 type TabId = (typeof tabs)[number]['id']
 
+const DATE_FORMATS = [
+  { value: 'DD/MM/YYYY', example: '31/12/2025' },
+  { value: 'MM/DD/YYYY', example: '12/31/2025' },
+  { value: 'YYYY-MM-DD', example: '2025-12-31' },
+  { value: 'DD MMM YYYY', example: '31 Dec 2025' },
+] as const
+
+const isTabId = (value: string | null): value is TabId =>
+  tabs.some((t) => t.id === value)
+
 export default function SettingsPage() {
   const { user } = useAuth()
   const { profile, setProfile } = useProfile()
-  const [tab, setTab] = useState<TabId>('business')
+  const { showSuccess, showError, askConfirm, AlertHost } = useAlertModal()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab')
+  const tab: TabId = isTabId(tabParam) ? tabParam : 'account'
+  const setTab = (id: TabId) => setSearchParams({ tab: id }, { replace: true })
   const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState('')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false)
+  const [phoneCountry, setPhoneCountry] = useState<Country>(DEFAULT_COUNTRY)
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [vatInput, setVatInput] = useState('')
 
   const [form, setForm] = useState<Partial<UserProfile>>({})
   const [templates, setTemplates] = useState<Record<DocumentType, Template[]>>({
@@ -40,7 +66,13 @@ export default function SettingsPage() {
   })
 
   useEffect(() => {
-    if (profile) setForm(profile)
+    if (!profile) return
+    setForm(profile)
+    const { country, number } = splitPhone(profile.phone)
+    setPhoneCountry(country)
+    setPhoneNumber(number)
+    setLogoLoadFailed(false)
+    setVatInput(profile.default_vat_rate != null ? String(profile.default_vat_rate) : '')
   }, [profile])
 
   useEffect(() => {
@@ -57,40 +89,78 @@ export default function SettingsPage() {
     })
   }, [])
 
-  const save = async (updates: Partial<UserProfile>) => {
+  const save = async (updates: Partial<UserProfile>, successMessage = 'Your changes have been saved.') => {
     if (!user) return
     setSaving(true)
-    setMessage('')
     const { data, error } = await updateProfile(user.id, updates)
     setSaving(false)
     if (error) {
-      setMessage(error.message)
+      showError('Could not save', error.message)
       return
     }
     if (data) setProfile(data as UserProfile)
-    setMessage('Saved successfully')
+    showSuccess('Saved', successMessage)
   }
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
+    e.target.value = ''
     if (!file || !user) return
-    const { url, error } = await uploadLogo(user.id, await file.arrayBuffer(), file.type)
-    if (error) {
-      setMessage(error.message)
-      return
+    setUploadingLogo(true)
+    try {
+      const { url, error } = await uploadLogo(user.id, await file.arrayBuffer(), file.type)
+      if (error) {
+        showError('Upload failed', error.message)
+        return
+      }
+      await save({ logo_url: url }, 'Your logo has been updated.')
+      setLogoLoadFailed(false)
+    } finally {
+      setUploadingLogo(false)
     }
-    await save({ logo_url: url })
   }
 
-  const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !user) return
-    const { url, error } = await uploadSignature(user.id, await file.arrayBuffer(), file.type)
-    if (error) {
-      setMessage(error.message)
+  const handleBusinessSave = () => {
+    const businessName = form.business_name?.trim() ?? ''
+    if (!businessName) {
+      showError('Required', 'Business name is required')
       return
     }
-    await save({ signature_url: url, signature_type: 'uploaded' })
+    const phone = phoneNumber.trim()
+      ? `${phoneCountry.dial} ${phoneNumber.trim()}`
+      : null
+    void save({
+      business_name: businessName,
+      phone,
+      website: form.website?.trim() || null,
+      address: form.address?.trim() || null,
+      tax_id: form.tax_id?.trim() || null,
+    }, 'Your business profile has been saved.')
+  }
+
+  const handlePreferencesSave = () => {
+    const trimmed = vatInput.trim()
+    const vat = trimmed ? parseFloat(trimmed) : null
+    if (trimmed && Number.isNaN(vat!)) {
+      showError('Invalid', 'VAT rate must be a number')
+      return
+    }
+    void save({
+      currency: form.currency ?? 'NGN',
+      date_format: form.date_format ?? 'DD/MM/YYYY',
+      default_vat_rate: vat,
+    }, 'Your preferences have been saved.')
+  }
+
+  const handleSignOut = () => {
+    askConfirm({
+      tone: 'info',
+      title: 'Sign out?',
+      message: 'You will need to sign in again to access your documents.',
+      confirmLabel: 'Sign out',
+      icon: LogOut,
+      onConfirm: () => signOut(),
+    })
   }
 
   if (!profile) return <AppShell><PageLoader /></AppShell>
@@ -113,7 +183,7 @@ export default function SettingsPage() {
             ))}
             <button
               type="button"
-              onClick={() => signOut()}
+              onClick={handleSignOut}
               className="mt-3 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-red-700 hover:bg-red-50"
             >
               <LogOut className="h-4 w-4" /> Sign out
@@ -121,136 +191,199 @@ export default function SettingsPage() {
           </nav>
         </div>
 
-        <div className="max-w-lg flex-1">
-          {message && (
-            <p className={`mb-3 text-xs ${message.includes('success') ? 'text-emerald-600' : 'text-red-600'}`}>
-              {message}
-            </p>
-          )}
-
+        <div className={`flex-1 ${tab === 'templates' ? 'max-w-2xl' : 'max-w-lg'}`}>
           {tab === 'business' && (
             <>
               <h2 className="text-sm font-semibold">Business profile</h2>
               <p className="mb-4 text-xs text-slate-500">This information appears on all your documents</p>
               <div className="mb-4 flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-xl border-2 border-dashed border-brand bg-indigo-50">
-                  {form.logo_url ? (
-                    <img src={form.logo_url} alt="" className="h-full w-full rounded-xl object-cover" />
+                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-brand bg-indigo-50">
+                  {uploadingLogo ? (
+                    <Spinner className="h-5 w-5" />
+                  ) : form.logo_url && !logoLoadFailed ? (
+                    <img
+                      src={form.logo_url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      onError={() => setLogoLoadFailed(true)}
+                    />
                   ) : (
                     <Building2 className="h-6 w-6 text-brand" />
                   )}
                 </div>
                 <div>
-                  <label className="cursor-pointer">
-                    <span className="inline-block rounded-lg border border-slate-200 px-3 py-1.5 text-xs">Upload logo</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                  <label className={`inline-block ${uploadingLogo ? 'pointer-events-none opacity-60' : 'cursor-pointer'}`}>
+                    <span className="inline-block rounded-lg border border-slate-200 px-3 py-1.5 text-xs">
+                      {form.logo_url ? 'Change logo' : 'Upload logo'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/jpg"
+                      className="hidden"
+                      disabled={uploadingLogo}
+                      onChange={(e) => void handleLogoUpload(e)}
+                    />
                   </label>
-                  <p className="mt-1 text-[10px] text-slate-400">PNG or JPG, max 5MB</p>
+                  <p className="mt-1 text-[10px] text-slate-400">PNG or JPG, max 2 MB</p>
                 </div>
               </div>
               <Card className="mb-3 space-y-3">
                 <SectionHead>Business info</SectionHead>
-                <Input label="Business name" value={form.business_name ?? ''} onChange={(e) => setForm({ ...form, business_name: e.target.value })} />
-                <Input label="Email" value={form.email ?? ''} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Input label="Phone" value={form.phone ?? ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-                  <Input label="Website" value={form.website ?? ''} onChange={(e) => setForm({ ...form, website: e.target.value })} />
+                <Input
+                  label="Business name"
+                  value={form.business_name ?? ''}
+                  placeholder="e.g. Acme Design Studio"
+                  onChange={(e) => setForm({ ...form, business_name: e.target.value })}
+                />
+                <div className="space-y-1">
+                  <Input
+                    label="Email"
+                    value={form.email ?? ''}
+                    placeholder="business@example.com"
+                    readOnly
+                    className="cursor-not-allowed text-slate-400"
+                  />
+                  <p className="text-[10px] text-slate-400">Change email in Account Settings</p>
                 </div>
-                <Textarea label="Address" value={form.address ?? ''} onChange={(e) => setForm({ ...form, address: e.target.value })} rows={2} />
+                <PhoneField
+                  country={phoneCountry}
+                  number={phoneNumber}
+                  onChangeCountry={setPhoneCountry}
+                  onChangeNumber={setPhoneNumber}
+                />
+                <Textarea
+                  label="Address"
+                  value={form.address ?? ''}
+                  placeholder="Street, City, State"
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  rows={3}
+                />
+                <Input
+                  label="Website"
+                  value={form.website ?? ''}
+                  placeholder="https://yoursite.com"
+                  onChange={(e) => setForm({ ...form, website: e.target.value })}
+                />
               </Card>
-              <Button disabled={saving} onClick={() => save({
-                business_name: form.business_name,
-                email: form.email,
-                phone: form.phone,
-                website: form.website,
-                address: form.address,
-              })}>
+              <Card className="mb-3 space-y-3">
+                <SectionHead>Tax</SectionHead>
+                <Input
+                  label="Tax ID / RC number"
+                  value={form.tax_id ?? ''}
+                  placeholder="e.g. RC-1234567"
+                  onChange={(e) => setForm({ ...form, tax_id: e.target.value })}
+                />
+              </Card>
+              <Button disabled={saving || uploadingLogo} onClick={handleBusinessSave}>
                 {saving ? 'Saving…' : 'Save changes'}
               </Button>
             </>
           )}
 
-          {tab === 'signature' && (
-            <>
-              <h2 className="text-sm font-semibold">Signature</h2>
-              <p className="mb-4 text-xs text-slate-500">Used on documents when signature is enabled</p>
-              {form.signature_url && (
-                <img src={form.signature_url} alt="Signature" className="mb-4 max-h-20 rounded border border-slate-200 bg-white p-2" />
-              )}
-              <label className="cursor-pointer">
-                <span className="inline-block rounded-lg border border-slate-200 px-3 py-2 text-xs">Upload signature image</span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleSignatureUpload} />
-              </label>
-            </>
+          {tab === 'signature' && user && (
+            <SignatureSettingsPanel
+              userId={user.id}
+              profile={profile}
+              setProfile={setProfile}
+            />
           )}
 
           {tab === 'preferences' && (
             <>
               <h2 className="text-sm font-semibold">Preferences</h2>
-              <Card className="mt-4 space-y-3">
-                <label className="block text-xs font-medium">Currency</label>
-                <select
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-                  value={form.currency ?? 'NGN'}
-                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
-                >
-                  {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <label className="block text-xs font-medium">Date format</label>
-                <select
-                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-                  value={form.date_format ?? 'DD/MM/YYYY'}
-                  onChange={(e) => setForm({ ...form, date_format: e.target.value })}
-                >
-                  {['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD MMM YYYY'].map((f) => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
+              <p className="mb-4 text-xs text-slate-500">Currency, VAT, and date format for your documents</p>
+
+              <p className="mb-2 text-[10px] font-bold tracking-wide text-slate-400 uppercase">Currency</p>
+              <div className="flex flex-wrap gap-2">
+                {CURRENCIES.map((c) => {
+                  const active = (form.currency ?? 'NGN') === c
+                  return (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setForm({ ...form, currency: c })}
+                      className={`rounded-full border px-4 py-2 text-xs font-medium transition ${
+                        active
+                          ? 'border-brand bg-indigo-50 font-semibold text-brand'
+                          : 'border-slate-200 bg-slate-50 text-slate-500 hover:bg-white'
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-2 mb-5 text-[11px] text-slate-400">
+                Amounts will display as {CURRENCY_SYMBOLS[form.currency ?? 'NGN'] ?? '₦'}
+              </p>
+
+              <p className="mb-2 text-[10px] font-bold tracking-wide text-slate-400 uppercase">Date format</p>
+              <div className="mb-5 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                {DATE_FORMATS.map((f, idx) => {
+                  const active = (form.date_format ?? 'DD/MM/YYYY') === f.value
+                  return (
+                    <div key={f.value}>
+                      {idx > 0 && <div className="mx-3.5 h-px bg-slate-100" />}
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, date_format: f.value })}
+                        className="flex w-full items-center gap-3 px-3.5 py-3.5 text-left hover:bg-slate-50"
+                      >
+                        <span
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                            active ? 'border-brand' : 'border-slate-300'
+                          }`}
+                        >
+                          {active && <span className="h-2 w-2 rounded-full bg-brand" />}
+                        </span>
+                        <span className="flex-1 text-sm text-slate-900">{f.value}</span>
+                        <span className="text-[11px] text-slate-400">{f.example}</span>
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+
+              <p className="mb-2 text-[10px] font-bold tracking-wide text-slate-400 uppercase">Tax</p>
+              <Card className="mb-4 space-y-2">
                 <Input
-                  label="Default VAT (%)"
-                  value={form.default_vat_rate != null ? String(form.default_vat_rate) : ''}
-                  onChange={(e) => setForm({ ...form, default_vat_rate: parseFloat(e.target.value) || null })}
+                  label="Default VAT rate (%)"
+                  value={vatInput}
+                  placeholder="e.g. 7.5"
+                  inputMode="decimal"
+                  onChange={(e) => setVatInput(e.target.value)}
                 />
+                <p className="text-[11px] text-slate-400">
+                  Applied automatically on new invoices. Leave blank to disable.
+                </p>
               </Card>
-              <Button className="mt-3" disabled={saving} onClick={() => save({
-                currency: form.currency,
-                date_format: form.date_format,
-                default_vat_rate: form.default_vat_rate,
-              })}>
-                Save preferences
+
+              <Button disabled={saving} onClick={handlePreferencesSave}>
+                {saving ? 'Saving…' : 'Save preferences'}
               </Button>
             </>
           )}
 
           {tab === 'templates' && (
-            <>
-              <h2 className="text-sm font-semibold">Default templates</h2>
-              <p className="mb-4 text-xs text-slate-500">Pre-selected when creating new documents</p>
-              {(['estimate', 'invoice', 'receipt'] as DocumentType[]).map((docType) => (
-                <Card key={docType} className="mb-3">
-                  <SectionHead>{docType.charAt(0).toUpperCase() + docType.slice(1)}</SectionHead>
-                  <select
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm capitalize"
-                    value={
-                      docType === 'estimate'
-                        ? form.default_estimate_template_id ?? ''
-                        : docType === 'invoice'
-                          ? form.default_invoice_template_id ?? ''
-                          : form.default_receipt_template_id ?? ''
-                    }
-                    onChange={(e) => save({ [defaultTemplateFieldFor(docType)]: e.target.value || null })}
-                  >
-                    <option value="">None</option>
-                    {templates[docType].map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                </Card>
-              ))}
-            </>
+            <TemplatesSettingsPanel
+              templates={templates}
+              form={form}
+              saving={saving}
+              onSetDefault={(docType, templateId) => {
+                const field = defaultTemplateFieldFor(docType)
+                if (form[field] === templateId) return
+                void save(
+                  { [field]: templateId },
+                  `${docType.charAt(0).toUpperCase() + docType.slice(1)} default template updated.`,
+                )
+              }}
+            />
           )}
+
+          {tab === 'account' && user && <AccountSettingsPanel user={user} />}
         </div>
       </div>
+      {AlertHost}
     </AppShell>
   )
 }

@@ -29,6 +29,12 @@ export const resetPassword = (email: string) =>
 export const updatePassword = (password: string) =>
   supabase.auth.updateUser({ password })
 
+export const updateEmail = (email: string) =>
+  supabase.auth.updateUser({ email })
+
+export const updateUserMetadata = (data: Record<string, unknown>) =>
+  supabase.auth.updateUser({ data })
+
 export const deleteAccount = () => supabase.rpc('delete_user_account')
 
 export const getSession = () => supabase.auth.getSession()

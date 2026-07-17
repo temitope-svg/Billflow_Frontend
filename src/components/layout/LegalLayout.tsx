@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Mail, type LucideIcon } from 'lucide-react'
 import { LogoBrand } from '../BillflowLogo'
 import { Button } from '../ui/Button'
@@ -30,6 +30,7 @@ export function LegalLayout({
   children,
 }: LegalLayoutProps) {
   const activeId = useScrollSpy(sections.map((s) => s.id))
+  const navigate = useNavigate()
 
   return (
     <div className="min-h-svh bg-white text-slate-900">
@@ -123,12 +124,13 @@ export function LegalLayout({
             </a>
           </div>
 
-          <Link
-            to="/"
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
             className="mt-8 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand-dark"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to home
-          </Link>
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
         </article>
       </div>
 

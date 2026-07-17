@@ -117,7 +117,7 @@ export async function saveDocumentFromDraft(
       document_type: draft.documentType,
       status: 'draft',
       currency: profile?.currency ?? 'NGN',
-      parent_id: null,
+      parent_id: draft.parentId ?? null,
       is_public: draft.isPublic,
       public_slug: null,
     },

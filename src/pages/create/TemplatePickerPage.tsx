@@ -1,36 +1,42 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check } from 'lucide-react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, LayoutGrid, Circle, Zap, BookOpen } from 'lucide-react'
 import { AppShell } from '../../components/layout/AppShell'
 import { Button } from '../../components/ui/Button'
 import { PageLoader } from '../../components/ui/Spinner'
-import { getTemplates } from '../../services/documents'
-import { createEmptyDraft, saveDraft } from '../../hooks/useDocumentDraft'
+import { TemplateCard } from '../../components/templates/TemplateCard'
+import { getDocumentWithDetails, getTemplates } from '../../services/documents'
+import {
+  createEmptyDraft,
+  draftFromDocument,
+  saveDraft,
+} from '../../hooks/useDocumentDraft'
 import { getDefaultTemplateId } from '../../utils/defaultTemplate'
 import { useProfile } from '../../hooks/useProfile'
-import type { DocumentType, StyleTag, Template } from '../../types/database'
+import type { DocumentType, DocumentWithDetails, StyleTag, Template } from '../../types/database'
 
-const styleFilters: Array<{ id: 'all' | StyleTag; label: string }> = [
-  { id: 'all', label: 'All' },
-  { id: 'minimal', label: 'Minimal' },
-  { id: 'bold', label: 'Bold' },
-  { id: 'classic', label: 'Classic' },
+const styleFilters: Array<{
+  id: 'all' | StyleTag
+  label: string
+  Icon: typeof LayoutGrid
+}> = [
+  { id: 'all', label: 'All', Icon: LayoutGrid },
+  { id: 'minimal', label: 'Minimal', Icon: Circle },
+  { id: 'bold', label: 'Bold', Icon: Zap },
+  { id: 'classic', label: 'Classic', Icon: BookOpen },
 ]
-
-const previewColors: Record<string, { bg: string; accent: string; text: string }> = {
-  minimal: { bg: '#EEF2FF', accent: '#4F46E5', text: '#3730A3' },
-  bold: { bg: '#1E293B', accent: '#4F46E5', text: '#94A3B8' },
-  classic: { bg: '#F8FAFC', accent: '#0F172A', text: '#0F172A' },
-}
 
 export default function TemplatePickerPage() {
   const { type } = useParams<{ type: DocumentType }>()
+  const [searchParams] = useSearchParams()
+  const parentId = searchParams.get('parentId')
   const navigate = useNavigate()
   const { profile } = useProfile()
   const [templates, setTemplates] = useState<Template[]>([])
   const [filter, setFilter] = useState<'all' | StyleTag>('all')
   const [selected, setSelected] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [continuing, setContinuing] = useState(false)
 
   const documentType = type as DocumentType
 
@@ -48,12 +54,43 @@ export default function TemplatePickerPage() {
   const filtered =
     filter === 'all' ? templates : templates.filter((t) => t.style_tag === filter)
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selected || !documentType) return
     const template = templates.find((t) => t.id === selected)
-    const draft = createEmptyDraft(documentType, selected)
+    setContinuing(true)
+
+    if (parentId) {
+      const { data } = await getDocumentWithDetails(parentId)
+      if (data) {
+        const parent = data as unknown as DocumentWithDetails
+        const draft = draftFromDocument(parent, {
+          documentType,
+          templateId: selected,
+          parentId,
+        })
+        draft.templateName = template?.name
+        draft.issueDate = new Date().toISOString().split('T')[0]
+        if (documentType === 'receipt') {
+          draft.paidDate = parent.paid_date ?? draft.paidDate
+          draft.paymentMethod = parent.payment_method ?? draft.paymentMethod
+          draft.paymentRef = parent.payment_reference ?? ''
+        }
+        saveDraft(draft)
+        setContinuing(false)
+        navigate(`/new/${documentType}/details`)
+        return
+      }
+    }
+
+    const draft = createEmptyDraft(documentType, selected, {
+      vatRate:
+        documentType === 'invoice' && profile?.default_vat_rate != null
+          ? String(profile.default_vat_rate)
+          : '',
+    })
     draft.templateName = template?.name
     saveDraft(draft)
+    setContinuing(false)
     navigate(`/new/${documentType}/details`)
   }
 
@@ -72,62 +109,46 @@ export default function TemplatePickerPage() {
       <p className="text-xs text-slate-500">Step 1 of 3 — Template</p>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {styleFilters.map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            onClick={() => setFilter(f.id)}
-            className={`rounded-full px-3 py-1.5 text-xs ${filter === f.id ? 'bg-brand text-white' : 'border border-slate-200 bg-white text-slate-500'}`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {filtered.map((template) => {
-          const colors = previewColors[template.style_tag ?? 'minimal'] ?? previewColors.minimal
-          const isSelected = selected === template.id
+        {styleFilters.map((f) => {
+          const active = filter === f.id
           return (
             <button
-              key={template.id}
+              key={f.id}
               type="button"
-              onClick={() => setSelected(template.id)}
-              className={`overflow-hidden rounded-xl border-2 bg-white text-left transition ${isSelected ? 'border-brand' : 'border-slate-200'}`}
+              onClick={() => setFilter(f.id)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                active
+                  ? 'border-brand bg-indigo-50 font-semibold text-brand'
+                  : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+              }`}
             >
-              <div
-                className="flex min-h-[130px] flex-col gap-1 p-4"
-                style={{ background: colors.bg }}
-              >
-                <div className="mb-1 flex justify-between">
-                  <div className="h-5 w-5 rounded" style={{ background: colors.accent }} />
-                  <span className="text-[9px] font-semibold uppercase" style={{ color: colors.text }}>
-                    {documentType}
-                  </span>
-                </div>
-                {[70, 50, 100, 100].map((w) => (
-                  <div
-                    key={w}
-                    className="h-1 rounded"
-                    style={{ width: `${w}%`, background: `${colors.accent}33` }}
-                  />
-                ))}
-              </div>
-              <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2 text-xs font-medium">
-                {template.name}
-                {isSelected && (
-                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-brand">
-                    <Check className="h-2.5 w-2.5 text-white" />
-                  </span>
-                )}
-              </div>
+              <f.Icon className={`h-3.5 w-3.5 ${active ? 'text-brand' : 'text-slate-400'}`} />
+              {f.label}
             </button>
           )
         })}
       </div>
 
+      {filtered.length === 0 ? (
+        <p className="mt-10 text-center text-sm text-slate-400">No templates in this style.</p>
+      ) : (
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filtered.map((template) => (
+            <TemplateCard
+              key={template.id}
+              template={template}
+              documentType={documentType}
+              selected={selected === template.id}
+              onSelect={() => setSelected(template.id)}
+            />
+          ))}
+        </div>
+      )}
+
       <div className="mt-6 flex justify-end">
-        <Button onClick={handleContinue}>Use this template →</Button>
+        <Button onClick={() => void handleContinue()} disabled={!selected || continuing}>
+          {continuing ? 'Loading…' : 'Use this template →'}
+        </Button>
       </div>
     </AppShell>
   )

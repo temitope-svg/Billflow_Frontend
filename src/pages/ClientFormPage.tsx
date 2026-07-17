@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input'
 import { Textarea } from '../components/ui/Textarea'
 import { PageLoader } from '../components/ui/Spinner'
 import { useAuth } from '../context/AuthContext'
+import { useAlertModal } from '../hooks/useAlertModal'
 import { createClient, getClient, updateClient } from '../services/clients'
 
 export default function ClientFormPage() {
@@ -14,6 +15,7 @@ export default function ClientFormPage() {
   const isEdit = Boolean(id)
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { showError, AlertHost } = useAlertModal()
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [name, setName] = useState('')
@@ -44,12 +46,20 @@ export default function ClientFormPage() {
     if (isEdit && id) {
       const { error } = await updateClient(id, payload)
       setSaving(false)
-      if (!error) navigate(`/clients/${id}`)
+      if (error) {
+        showError('Could not update client', error.message)
+        return
+      }
+      navigate(`/clients/${id}`)
       return
     }
     const { data, error } = await createClient({ ...payload, user_id: user.id })
     setSaving(false)
-    if (!error && data) navigate(`/clients/${data.id}`)
+    if (error) {
+      showError('Could not create client', error.message)
+      return
+    }
+    if (data) navigate(`/clients/${data.id}`)
   }
 
   if (loading) return <AppShell><PageLoader /></AppShell>
@@ -68,6 +78,7 @@ export default function ClientFormPage() {
         <Textarea label="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
         <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save client'}</Button>
       </form>
+      {AlertHost}
     </AppShell>
   )
 }

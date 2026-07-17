@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Search, Receipt, FileText, Globe, Lock, MoreHorizontal } from 'lucide-react'
+import { Plus, Search, Globe, Lock, MoreHorizontal } from 'lucide-react'
 import { AppShell } from '../components/layout/AppShell'
+import { DocumentTypeIcon } from '../components/documents/DocumentTypeIcon'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { PageLoader } from '../components/ui/Spinner'
@@ -110,14 +111,16 @@ export default function DocumentsPage() {
           <tbody>
             {filtered.map((doc) => {
               const badge = getStatusBadge(doc)
-              const Icon = doc.document_type === 'estimate' ? FileText : Receipt
               return (
                 <tr key={doc.id} className="border-b border-slate-50 hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <Link to={`/documents/${doc.id}`} className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50">
-                        <Icon className="h-3.5 w-3.5 text-brand" />
-                      </div>
+                      <DocumentTypeIcon
+                        type={doc.document_type}
+                        status={doc.status}
+                        dueDate={doc.due_date}
+                        size="sm"
+                      />
                       <span className="font-medium">{doc.document_number}</span>
                     </Link>
                   </td>

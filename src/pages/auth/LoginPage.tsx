@@ -3,24 +3,28 @@ import { Link, useNavigate } from 'react-router-dom'
 import { AuthShell } from '../../components/layout/AuthShell'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
+import { PasswordInput } from '../../components/ui/PasswordInput'
+import { useAlertModal } from '../../hooks/useAlertModal'
 import { signIn, signInWithGoogle } from '../../services/auth'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const { showError, AlertHost } = useAlertModal()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError('')
     const { error } = await signIn(email, password)
     setLoading(false)
     if (error) {
-      setError(error.message)
+      const message =
+        error.message.toLowerCase().includes('invalid login credentials')
+          ? 'Invalid email or password'
+          : error.message
+      showError('Could not log in', message)
       return
     }
     navigate('/dashboard')
@@ -33,21 +37,28 @@ export default function LoginPage() {
           <h1 className="text-lg font-semibold text-slate-900">Welcome back</h1>
           <p className="text-sm text-slate-500">Log in to your Billflow account</p>
         </div>
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>}
-        <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        <Input
+          label="Email"
+          type="email"
+          placeholder="janesmith@gmail.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          required
+        />
         <div>
-          <Input
+          <PasswordInput
             label="Password"
-            type={showPassword ? 'text' : 'password'}
+            placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
             required
           />
-          <div className="mt-1 flex justify-between text-xs">
-            <button type="button" className="text-brand" onClick={() => setShowPassword(!showPassword)}>
-              {showPassword ? 'Hide' : 'Show'}
-            </button>
-            <Link to="/forgot-password" className="font-medium text-brand">Forgot password?</Link>
+          <div className="mt-1 flex justify-end text-xs">
+            <Link to="/forgot-password" className="font-medium text-brand">
+              Forgot password?
+            </Link>
           </div>
         </div>
         <Button type="submit" fullWidth disabled={loading} className="py-2.5">
@@ -65,6 +76,7 @@ export default function LoginPage() {
           No account? <Link to="/register" className="font-medium text-brand">Create one free</Link>
         </p>
       </form>
+      {AlertHost}
     </AuthShell>
   )
 }

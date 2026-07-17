@@ -6,6 +6,53 @@
   --color-brand-dark: #3730a3;
   --font-sans: 'DM Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, monospace;
+  --animate-error-in: error-in 0.45s ease-out;
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-scale-in: scale-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes error-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  70% {
+    transform: translateX(-3px);
+  }
+  82% {
+    transform: translateX(3px);
+  }
+  92% {
+    transform: translateX(-1.5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 body {
