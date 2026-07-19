@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Copy, Download, Mail, MessageCircle, ChevronRight } from 'lucide-react'
 import { Button } from '../ui/Button'
 import type { DocumentWithDetails } from '../../types/database'
@@ -6,6 +7,7 @@ import { publicDocumentUrl } from '../../utils/publicSlug'
 
 interface ShareDocumentModalProps {
   doc: DocumentWithDetails
+  html: string | null
   onClose: () => void
   onDownload: () => void
 }
@@ -14,19 +16,22 @@ export function ShareDocumentModal({ doc, onClose, onDownload }: ShareDocumentMo
   const symbol = symbolFor(doc.currency)
   const link = doc.is_public && doc.public_slug ? publicDocumentUrl(doc.public_slug) : ''
   const shareText = `${doc.document_number} — ${doc.recipient?.name ?? ''} — ${symbol}${doc.total_amount.toLocaleString()}`
+  const [copiedLink, setCopiedLink] = useState(false)
 
   const copyLink = async () => {
     if (!link) return
     await navigator.clipboard.writeText(link)
+    setCopiedLink(true)
+    window.setTimeout(() => setCopiedLink(false), 2000)
   }
 
   const shareWhatsApp = () => {
-    const body = link ? `${shareText}\n${link}` : shareText
+    const body = link ? `${shareText}\n${link}` : `${shareText}\n\n(Make this document public to include a view link.)`
     window.open(`https://wa.me/?text=${encodeURIComponent(body)}`, '_blank')
   }
 
   const shareEmail = () => {
-    const body = link ? `${shareText}\n${link}` : shareText
+    const body = link ? `${shareText}\n${link}` : `${shareText}\n\n(Make this document public to include a view link.)`
     window.location.href = `mailto:?subject=${encodeURIComponent(doc.document_number)}&body=${encodeURIComponent(body)}`
   }
 
@@ -45,15 +50,15 @@ export function ShareDocumentModal({ doc, onClose, onDownload }: ShareDocumentMo
           </p>
           <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
             <span className="flex-1 truncate font-mono text-xs text-brand">{link}</span>
-            <Button variant="outline" className="px-2 py-1 text-[10px]" onClick={copyLink}>
+            <Button variant="outline" className="px-2 py-1 text-[10px]" onClick={() => void copyLink()}>
               <Copy className="h-3 w-3" />
-              Copy
+              {copiedLink ? 'Copied' : 'Copy'}
             </Button>
           </div>
         </div>
       ) : (
         <p className="mt-4 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-left text-[11px] text-amber-800">
-          Make this document public to get a shareable link. You can still share the PDF or a message below.
+          Make this document public to get a shareable link for WhatsApp or email.
         </p>
       )}
 

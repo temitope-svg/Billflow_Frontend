@@ -20,8 +20,7 @@ export const html = `<!DOCTYPE html>
             </div>
             <div style="font-size:12px; color:#D3F4E4; margin-top:8px; line-height:1.7;">
               {{document_number}}<br/>
-              Issue date: {{issue_date}}<br/>
-              Due date: {{due_date}}
+              Issue date: {{issue_date}}{{due_date_line}}
             </div>
           </td>
         </tr>
@@ -37,10 +36,7 @@ export const html = `<!DOCTYPE html>
           <div style="background:#D3F4E4; border-radius:12px; padding:16px 20px;">
             <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#0E6E58; margin-bottom:6px;">Bill To</div>
             <div style="font-size:13px; color:#1F2937; line-height:1.6; font-weight:400;">
-              <span style="font-weight:700; text-transform:uppercase;">{{client_name}}</span><br/>
-              {{client_address}}<br/>
-              {{client_email}}<br/>
-              {{client_phone}}
+              <span style="font-weight:700; text-transform:uppercase;">{{client_name}}</span>{{client_address}}{{client_email}}{{client_phone}}
             </div>
           </div>
         </td>

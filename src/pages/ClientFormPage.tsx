@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { AppShell } from '../components/layout/AppShell'
+import { BackButton } from '../components/ui/BackButton'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Textarea } from '../components/ui/Textarea'
@@ -66,9 +66,7 @@ export default function ClientFormPage() {
 
   return (
     <AppShell>
-      <Link to={isEdit ? `/clients/${id}` : '/clients'} className="mb-4 inline-flex items-center gap-2 text-sm text-slate-500">
-        <ArrowLeft className="h-4 w-4" /> Back
-      </Link>
+      <BackButton fallback={isEdit ? `/clients/${id}` : '/clients'} />
       <h1 className="mb-4 text-lg font-semibold">{isEdit ? 'Edit client' : 'New client'}</h1>
       <form onSubmit={handleSave} className="max-w-md space-y-3">
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} required />

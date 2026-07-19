@@ -184,7 +184,7 @@ export function AccountSettingsPanel({ user }: AccountSettingsPanelProps) {
       message: 'You will need to sign in again to access your documents.',
       confirmLabel: 'Sign out',
       icon: LogOut,
-      onConfirm: () => signOut(),
+      onConfirm: () => { void signOut() },
     })
   }
 

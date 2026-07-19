@@ -31,10 +31,7 @@ export const html = `<!DOCTYPE html>
         <td style="width:65%; vertical-align:top;">
           <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#1E293B; margin-bottom:6px;">Received From</div>
           <div style="font-size:13px; color:#1E293B; line-height:1.6; font-weight:400;">
-            {{client_name}}<br/>
-            {{client_address}}<br/>
-            {{client_email}}<br/>
-            {{client_phone}}
+            {{client_name}}{{client_address}}{{client_email}}{{client_phone}}
           </div>
         </td>
         <td style="width:35%; vertical-align:top; text-align:right;">

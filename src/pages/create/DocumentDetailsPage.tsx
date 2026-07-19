@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Plus, Search, Trash2, Users } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Plus, Search, Trash2, Users } from 'lucide-react'
 import { AppShell } from '../../components/layout/AppShell'
+import { BackButton } from '../../components/ui/BackButton'
 import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Textarea } from '../../components/ui/Textarea'
@@ -64,6 +65,7 @@ export default function DocumentDetailsPage() {
   const [allClients, setAllClients] = useState<Client[]>([])
   const [loadingClients, setLoadingClients] = useState(false)
   const [clientPickerSearch, setClientPickerSearch] = useState('')
+  const [dueDateError, setDueDateError] = useState('')
 
   useEffect(() => {
     const existing = loadDraft()
@@ -159,6 +161,11 @@ export default function DocumentDetailsPage() {
   const total = subtotal + vatAmt - discAmt
 
   const goToPreview = () => {
+    if (type === 'invoice' && !draft.dueDate) {
+      setDueDateError('Due date is required')
+      return
+    }
+    setDueDateError('')
     if (!isBusinessProfileComplete(profile)) {
       setShowProfilePrompt(true)
       return
@@ -170,13 +177,14 @@ export default function DocumentDetailsPage() {
     <AppShell>
       <div className="flex gap-5">
         <div className="min-w-0 flex-1">
-          <Link
-            to={`/new/${type}/template`}
+          <BackButton
+            fallback={
+              draft?.editDocumentId
+                ? `/documents/${draft.editDocumentId}`
+                : `/new/${type}/template`
+            }
             className="mb-3 inline-flex items-center gap-2 text-sm text-slate-500"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Link>
+          />
           <h1 className="text-sm font-semibold capitalize">{type} details</h1>
           <p className="mb-4 text-[10px] text-slate-500">Step 2 of 3 — Details</p>
 
@@ -260,10 +268,15 @@ export default function DocumentDetailsPage() {
               />
               {type === 'invoice' && (
                 <Input
-                  label="Due date"
+                  label="Due date *"
                   type="date"
+                  required
                   value={draft.dueDate}
-                  onChange={(e) => update({ dueDate: e.target.value })}
+                  error={dueDateError}
+                  onChange={(e) => {
+                    setDueDateError('')
+                    update({ dueDate: e.target.value })
+                  }}
                 />
               )}
               {type === 'estimate' && (

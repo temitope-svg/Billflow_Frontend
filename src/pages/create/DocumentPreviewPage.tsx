@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Globe, Info, Lock, Pencil } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { Globe, Info, Lock, Pencil } from 'lucide-react'
 import { AppShell } from '../../components/layout/AppShell'
+import { BackButton } from '../../components/ui/BackButton'
 import { Button } from '../../components/ui/Button'
 import { Card, SectionHead } from '../../components/ui/Card'
 import { Toggle } from '../../components/ui/Toggle'
@@ -17,7 +18,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useProfile, useDateFormat } from '../../hooks/useProfile'
 import { useAlertModal } from '../../hooks/useAlertModal'
 import { getTemplates } from '../../services/documents'
-import { buildDocumentHtml, printDocumentPdf } from '../../services/documentHtml'
+import { buildDocumentHtml, downloadDocumentHtmlAsPdf } from '../../services/documentHtml'
 import { enrichDocWithProfileLogo } from '../../utils/documentLogo'
 import { saveDocumentFromDraft } from '../../utils/saveDocument'
 import type { DocumentType, DocumentWithDetails, Template } from '../../types/database'
@@ -98,22 +99,30 @@ export default function DocumentPreviewPage() {
 
   const handleDownload = async () => {
     if (!previewDoc || !user) return
-    const enriched = await enrichDocWithProfileLogo(previewDoc, user.id)
-    const enrichedHtml = buildDocumentHtml(enriched, dateFormat)
-    if (enrichedHtml) printDocumentPdf(enrichedHtml, previewDoc.document_number)
+    try {
+      const enriched = await enrichDocWithProfileLogo(previewDoc, user.id)
+      const enrichedHtml = buildDocumentHtml(enriched, dateFormat)
+      if (enrichedHtml) await downloadDocumentHtmlAsPdf(enrichedHtml, previewDoc.document_number)
+    } catch (e) {
+      showError(
+        'Could not download PDF',
+        e instanceof Error ? e.message : 'Something went wrong while generating the PDF.',
+      )
+    }
   }
 
   if (!draft || !type) return <AppShell><PageLoader /></AppShell>
 
   return (
     <AppShell>
-      <div className="flex gap-5">
+      <div className="flex flex-col gap-5 lg:flex-row">
         <div className="min-w-0 flex-1">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <Link to={`/new/${type}/details`} className="inline-flex items-center gap-2 text-sm text-slate-500">
-                <ArrowLeft className="h-4 w-4" /> Back
-              </Link>
+              <BackButton
+                fallback={`/new/${type}/details`}
+                className="inline-flex items-center gap-2 text-sm text-slate-500"
+              />
               <h1 className="text-sm font-semibold capitalize">Preview {type}</h1>
               <p className="text-[10px] text-slate-500">Step 3 of 3 — Preview &amp; save</p>
             </div>
@@ -130,7 +139,7 @@ export default function DocumentPreviewPage() {
           {html ? <DocumentHtmlPreview html={html} /> : <PageLoader />}
         </div>
 
-        <div className="w-72 shrink-0 space-y-3">
+        <div className="w-full shrink-0 space-y-3 lg:w-72">
           <Card>
             <SectionHead>Document visibility</SectionHead>
             <div className="flex items-center justify-between py-1">
@@ -174,10 +183,11 @@ export default function DocumentPreviewPage() {
         {previewDoc && savedId && (
           <SaveShareModal
             doc={{ ...previewDoc, id: savedId, is_public: draft.isPublic, public_slug: savedSlug }}
+            html={html}
             publicSlug={savedSlug}
             onClose={() => setShowModal(false)}
             onView={() => navigate(`/documents/${savedId}`)}
-            onDownload={handleDownload}
+            onDownload={() => void handleDownload()}
           />
         )}
       </Modal>

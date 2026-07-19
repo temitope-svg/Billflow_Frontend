@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AppShell } from '../../components/layout/AppShell'
 import { DocumentTypeIcon } from '../../components/documents/DocumentTypeIcon'
 import type { DocumentType } from '../../types/database'
@@ -11,17 +11,26 @@ const types: Array<{ type: DocumentType; label: string; desc: string }> = [
 
 export default function NewDocumentPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const clientId = searchParams.get('clientId')
+
+  const startCreate = (type: DocumentType) => {
+    const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : ''
+    navigate(`/new/${type}/template${query}`)
+  }
 
   return (
     <AppShell>
       <h1 className="mb-2 text-lg font-semibold">Create new document</h1>
-      <p className="mb-6 text-sm text-slate-500">Choose a document type to get started</p>
+      <p className="mb-6 text-sm text-slate-500">
+        {clientId ? 'Choose a document type for this client' : 'Choose a document type to get started'}
+      </p>
       <div className="grid max-w-2xl gap-3 sm:grid-cols-3">
         {types.map(({ type, label, desc }) => (
           <button
             key={type}
             type="button"
-            onClick={() => navigate(`/new/${type}/template`)}
+            onClick={() => startCreate(type)}
             className="rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-brand hover:shadow-sm"
           >
             <DocumentTypeIcon type={type} size="lg" className="mb-3" />

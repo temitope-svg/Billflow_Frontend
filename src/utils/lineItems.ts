@@ -18,8 +18,7 @@ export const parseUnitField = (raw: string): { quantity: number; unit: string | 
 
 /** Display value for the Unit input when loading an existing line item. */
 export const formatUnitField = (unit: string | null, quantity: number): string => {
-  if (unit && quantity !== 1) return `${quantity} ${unit}`
-  if (unit) return unit
+  if (unit) return `${quantity} ${unit}`
   if (quantity !== 1) return String(quantity)
   return ''
 }

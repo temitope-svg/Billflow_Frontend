@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Check, Copy, Download, Mail, MessageCircle, ChevronRight } from 'lucide-react'
 import { Button } from '../ui/Button'
 import type { DocumentWithDetails } from '../../types/database'
@@ -7,6 +8,7 @@ import { publicDocumentUrl } from '../../utils/publicSlug'
 
 interface SaveShareModalProps {
   doc: DocumentWithDetails
+  html: string | null
   publicSlug?: string | null
   onClose: () => void
   onView: () => void
@@ -23,18 +25,23 @@ export function SaveShareModal({
   const symbol = symbolFor(doc.currency)
   const link = publicSlug ? publicDocumentUrl(publicSlug) : ''
   const shareText = `${doc.document_number} — ${doc.recipient?.name ?? ''} — ${symbol}${doc.total_amount.toLocaleString()}`
+  const [copiedLink, setCopiedLink] = useState(false)
 
   const copyLink = async () => {
     if (!link) return
     await navigator.clipboard.writeText(link)
+    setCopiedLink(true)
+    window.setTimeout(() => setCopiedLink(false), 2000)
   }
 
   const shareWhatsApp = () => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(`${shareText}\n${link}`)}`, '_blank')
+    const body = link ? `${shareText}\n${link}` : shareText
+    window.open(`https://wa.me/?text=${encodeURIComponent(body)}`, '_blank')
   }
 
   const shareEmail = () => {
-    window.location.href = `mailto:?subject=${encodeURIComponent(doc.document_number)}&body=${encodeURIComponent(`${shareText}\n${link}`)}`
+    const body = link ? `${shareText}\n${link}` : shareText
+    window.location.href = `mailto:?subject=${encodeURIComponent(doc.document_number)}&body=${encodeURIComponent(body)}`
   }
 
   return (
@@ -61,9 +68,9 @@ export function SaveShareModal({
           </p>
           <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
             <span className="flex-1 truncate font-mono text-xs text-brand">{link}</span>
-            <Button variant="outline" className="px-2 py-1 text-[10px]" onClick={copyLink}>
+            <Button variant="outline" className="px-2 py-1 text-[10px]" onClick={() => void copyLink()}>
               <Copy className="h-3 w-3" />
-              Copy
+              {copiedLink ? 'Copied' : 'Copy'}
             </Button>
           </div>
         </div>

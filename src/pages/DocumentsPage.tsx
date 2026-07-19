@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Plus, Search, Globe, Lock, MoreHorizontal } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ChevronLeft, ChevronRight, Plus, Search, Globe, Lock } from 'lucide-react'
 import { AppShell } from '../components/layout/AppShell'
 import { DocumentTypeIcon } from '../components/documents/DocumentTypeIcon'
 import { Button } from '../components/ui/Button'
@@ -27,6 +27,8 @@ type DocRow = {
   recipient: { name: string } | null
 }
 
+const PAGE_SIZE = 10
+
 const typeFilters: Array<{ id: 'all' | DocumentType; label: string }> = [
   { id: 'all', label: 'All types' },
   { id: 'estimate', label: 'Estimates' },
@@ -42,15 +44,22 @@ export default function DocumentsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<'all' | DocumentType>('all')
+  const [page, setPage] = useState(0)
 
   useEffect(() => {
     if (!user) return
+    setLoading(true)
     const filters = typeFilter === 'all' ? undefined : { type: typeFilter }
     getDocuments(user.id, filters).then(({ data }) => {
       setDocs((data as unknown as DocRow[]) ?? [])
+      setPage(0)
       setLoading(false)
     })
   }, [user, typeFilter])
+
+  useEffect(() => {
+    setPage(0)
+  }, [search])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -62,11 +71,15 @@ export default function DocumentsPage() {
     )
   }, [docs, search])
 
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount - 1)
+  const pageDocs = filtered.slice(safePage * PAGE_SIZE, safePage * PAGE_SIZE + PAGE_SIZE)
+
   if (loading) return <AppShell><PageLoader /></AppShell>
 
   return (
     <AppShell>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-lg font-semibold">Documents</h1>
         <Button className="text-xs" onClick={() => navigate('/new')}>
           <Plus className="h-3.5 w-3.5" /> New document
@@ -74,10 +87,10 @@ export default function DocumentsPage() {
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="flex max-w-xs flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
-          <Search className="h-4 w-4 text-slate-400" />
+        <div className="flex min-w-[12rem] max-w-xs flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
+          <Search className="h-4 w-4 shrink-0 text-slate-400" />
           <input
-            className="flex-1 bg-transparent text-xs outline-none"
+            className="min-w-0 flex-1 bg-transparent text-xs outline-none"
             placeholder="Search documents..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -95,8 +108,8 @@ export default function DocumentsPage() {
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <table className="w-full min-w-[40rem] text-left text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-[10px] font-semibold tracking-wide text-slate-500 uppercase">
             <tr>
               <th className="px-4 py-2.5">Document</th>
@@ -105,16 +118,27 @@ export default function DocumentsPage() {
               <th className="px-3 py-2.5 text-right">Amount</th>
               <th className="px-3 py-2.5 text-center">Status</th>
               <th className="px-3 py-2.5 text-center">Visibility</th>
-              <th className="px-4 py-2.5" />
             </tr>
           </thead>
           <tbody>
-            {filtered.map((doc) => {
+            {pageDocs.map((doc) => {
               const badge = getStatusBadge(doc)
               return (
-                <tr key={doc.id} className="border-b border-slate-50 hover:bg-slate-50">
+                <tr
+                  key={doc.id}
+                  role="link"
+                  tabIndex={0}
+                  onClick={() => navigate(`/documents/${doc.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      navigate(`/documents/${doc.id}`)
+                    }
+                  }}
+                  className="cursor-pointer border-b border-slate-50 hover:bg-slate-50"
+                >
                   <td className="px-4 py-3">
-                    <Link to={`/documents/${doc.id}`} className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <DocumentTypeIcon
                         type={doc.document_type}
                         status={doc.status}
@@ -122,7 +146,7 @@ export default function DocumentsPage() {
                         size="sm"
                       />
                       <span className="font-medium">{doc.document_number}</span>
-                    </Link>
+                    </div>
                   </td>
                   <td className="px-3 py-3 text-slate-700">{doc.recipient?.name ?? '—'}</td>
                   <td className="px-3 py-3 text-xs text-slate-500">{formatDate(doc.issue_date, dateFormat)}</td>
@@ -136,9 +160,6 @@ export default function DocumentsPage() {
                       {doc.is_public ? 'Public' : 'Private'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-400">
-                    <MoreHorizontal className="inline h-4 w-4" />
-                  </td>
                 </tr>
               )
             })}
@@ -148,6 +169,38 @@ export default function DocumentsPage() {
           <p className="p-8 text-center text-sm text-slate-400">No documents found</p>
         )}
       </div>
+
+      {filtered.length > PAGE_SIZE && (
+        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500">
+          <span>
+            Showing {safePage * PAGE_SIZE + 1}–
+            {Math.min((safePage + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="px-2 py-1 text-xs"
+              disabled={safePage === 0}
+              onClick={() => setPage((p) => Math.max(0, p - 1))}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Prev
+            </Button>
+            <span>
+              {safePage + 1} / {pageCount}
+            </span>
+            <Button
+              variant="outline"
+              className="px-2 py-1 text-xs"
+              disabled={safePage >= pageCount - 1}
+              onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+            >
+              Next
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      )}
     </AppShell>
   )
 }

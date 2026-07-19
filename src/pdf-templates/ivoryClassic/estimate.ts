@@ -25,17 +25,14 @@ export const html = `<!DOCTYPE html>
 
     <div style="text-align:center; margin-top:10px; padding-bottom:10px; border-bottom:1px solid #A67C3D;">
       <span style="font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#2B2118;">
-        ESTIMATE NO: {{document_number}} &nbsp;&nbsp;|&nbsp;&nbsp; ISSUE DATE: {{issue_date}} &nbsp;&nbsp;|&nbsp;&nbsp; VALID UNTIL: {{valid_until}}
+        ESTIMATE NO: {{document_number}} &nbsp;&nbsp;|&nbsp;&nbsp; ISSUE DATE: {{issue_date}}{{valid_until_meta}}
       </span>
     </div>
 
     <div style="margin-top:20px; text-align:left;">
       <div style="font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#2B2118; margin-bottom:6px;">Prepared For</div>
       <div style="font-size:13px; color:#2B2118; line-height:1.7; font-weight:400; text-transform:uppercase;">
-        {{client_name}}<br/>
-        {{client_address}}<br/>
-        {{client_email}}<br/>
-        {{client_phone}}
+        {{client_name}}{{client_address}}{{client_email}}{{client_phone}}
       </div>
     </div>
 

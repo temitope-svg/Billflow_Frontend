@@ -12,6 +12,9 @@ export async function saveDocumentFromDraft(
   profile: UserProfile | null,
 ) {
   if (!draft.clientName.trim()) throw new Error('Client name is required')
+  if (draft.documentType === 'invoice' && !draft.dueDate) {
+    throw new Error('Due date is required for invoices')
+  }
 
   let clientId = draft.clientId
   if (!clientId) {
@@ -70,14 +73,15 @@ export async function saveDocumentFromDraft(
     is_public: draft.isPublic,
   }
 
-  const bankDetails = draft.bankName.trim()
-    ? {
-        bank_name: draft.bankName,
-        account_name: draft.accountName,
-        account_number: draft.accountNumber,
-        sort_code: draft.sortCode.trim() || null,
-      }
-    : undefined
+  const bankDetails =
+    draft.documentType === 'invoice' && draft.bankName.trim()
+      ? {
+          bank_name: draft.bankName,
+          account_name: draft.accountName,
+          account_number: draft.accountNumber,
+          sort_code: draft.sortCode.trim() || null,
+        }
+      : undefined
 
   const recipient = {
     client_id: clientId,

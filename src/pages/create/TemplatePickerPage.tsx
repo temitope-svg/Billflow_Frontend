@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, LayoutGrid, Circle, Zap, BookOpen } from 'lucide-react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { LayoutGrid, Circle, Zap, BookOpen } from 'lucide-react'
 import { AppShell } from '../../components/layout/AppShell'
+import { BackButton } from '../../components/ui/BackButton'
 import { Button } from '../../components/ui/Button'
 import { PageLoader } from '../../components/ui/Spinner'
 import { TemplateCard } from '../../components/templates/TemplateCard'
 import { getDocumentWithDetails, getTemplates } from '../../services/documents'
+import { getClient } from '../../services/clients'
 import {
   createEmptyDraft,
   draftFromDocument,
@@ -13,7 +15,7 @@ import {
 } from '../../hooks/useDocumentDraft'
 import { getDefaultTemplateId } from '../../utils/defaultTemplate'
 import { useProfile } from '../../hooks/useProfile'
-import type { DocumentType, DocumentWithDetails, StyleTag, Template } from '../../types/database'
+import type { Client, DocumentType, DocumentWithDetails, StyleTag, Template } from '../../types/database'
 
 const styleFilters: Array<{
   id: 'all' | StyleTag
@@ -30,6 +32,7 @@ export default function TemplatePickerPage() {
   const { type } = useParams<{ type: DocumentType }>()
   const [searchParams] = useSearchParams()
   const parentId = searchParams.get('parentId')
+  const clientId = searchParams.get('clientId')
   const navigate = useNavigate()
   const { profile } = useProfile()
   const [templates, setTemplates] = useState<Template[]>([])
@@ -39,6 +42,7 @@ export default function TemplatePickerPage() {
   const [continuing, setContinuing] = useState(false)
 
   const documentType = type as DocumentType
+  const backTo = clientId ? `/new?clientId=${encodeURIComponent(clientId)}` : '/new'
 
   useEffect(() => {
     if (!documentType) return
@@ -74,6 +78,13 @@ export default function TemplatePickerPage() {
           draft.paidDate = parent.paid_date ?? draft.paidDate
           draft.paymentMethod = parent.payment_method ?? draft.paymentMethod
           draft.paymentRef = parent.payment_reference ?? ''
+          // Receipts get their own notes — don't carry invoice notes/terms/bank over.
+          draft.notes = ''
+          draft.terms = ''
+          draft.bankName = ''
+          draft.accountName = ''
+          draft.accountNumber = ''
+          draft.sortCode = ''
         }
         saveDraft(draft)
         setContinuing(false)
@@ -89,6 +100,19 @@ export default function TemplatePickerPage() {
           : '',
     })
     draft.templateName = template?.name
+
+    if (clientId) {
+      const { data: clientData } = await getClient(clientId)
+      const client = clientData as Client | null
+      if (client) {
+        draft.clientId = client.id
+        draft.clientName = client.name
+        draft.clientEmail = client.email ?? ''
+        draft.clientPhone = client.phone ?? ''
+        draft.clientAddress = client.address ?? ''
+      }
+    }
+
     saveDraft(draft)
     setContinuing(false)
     navigate(`/new/${documentType}/details`)
@@ -98,13 +122,7 @@ export default function TemplatePickerPage() {
 
   return (
     <AppShell>
-      <Link
-        to="/new"
-        className="mb-4 inline-flex items-center gap-2 text-sm text-slate-500"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back
-      </Link>
+      <BackButton fallback={backTo} />
       <h1 className="text-base font-semibold capitalize">Choose a {documentType} template</h1>
       <p className="text-xs text-slate-500">Step 1 of 3 — Template</p>
 

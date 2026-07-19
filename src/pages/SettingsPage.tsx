@@ -159,7 +159,7 @@ export default function SettingsPage() {
       message: 'You will need to sign in again to access your documents.',
       confirmLabel: 'Sign out',
       icon: LogOut,
-      onConfirm: () => signOut(),
+      onConfirm: () => { void signOut() },
     })
   }
 
@@ -167,31 +167,33 @@ export default function SettingsPage() {
 
   return (
     <AppShell>
-      <div className="flex gap-6">
-        <div className="w-44 shrink-0">
+      <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
+        <div className="lg:w-44 lg:shrink-0">
           <h1 className="mb-3 text-base font-semibold">Settings</h1>
-          <nav className="space-y-0.5">
+          <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:space-y-0.5 lg:overflow-visible lg:px-0 lg:pb-0">
             {tabs.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setTab(id)}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs ${tab === id ? 'bg-indigo-50 font-medium text-brand' : 'text-slate-500 hover:bg-slate-50'}`}
+                className={`flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-xs whitespace-nowrap lg:w-full ${
+                  tab === id ? 'bg-indigo-50 font-medium text-brand' : 'text-slate-500 hover:bg-slate-50'
+                }`}
               >
-                <Icon className="h-4 w-4" /> {label}
+                <Icon className="h-4 w-4 shrink-0" /> {label}
               </button>
             ))}
             <button
               type="button"
               onClick={handleSignOut}
-              className="mt-3 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-red-700 hover:bg-red-50"
+              className="mt-0 flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-xs whitespace-nowrap text-red-700 hover:bg-red-50 lg:mt-3 lg:w-full"
             >
-              <LogOut className="h-4 w-4" /> Sign out
+              <LogOut className="h-4 w-4 shrink-0" /> Sign out
             </button>
           </nav>
         </div>
 
-        <div className={`flex-1 ${tab === 'templates' ? 'max-w-2xl' : 'max-w-lg'}`}>
+        <div className={`min-w-0 flex-1 ${tab === 'templates' ? 'max-w-2xl' : 'max-w-lg'}`}>
           {tab === 'business' && (
             <>
               <h2 className="text-sm font-semibold">Business profile</h2>

@@ -234,7 +234,7 @@ export function buildPreviewDocFromDraft(
         }
       }),
     bank_details:
-      draft.bankName && draft.accountNumber
+      draft.documentType === 'invoice' && draft.bankName && draft.accountNumber
         ? {
             id: 'preview',
             document_id: 'preview',

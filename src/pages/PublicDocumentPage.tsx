@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button'
 import { PageLoader } from '../components/ui/Spinner'
 import { DocumentHtmlPreview } from '../components/documents/DocumentPreview'
 import { getPublicDocumentBySlug } from '../services/documents'
-import { buildDocumentHtml, printDocumentPdf } from '../services/documentHtml'
+import { buildDocumentHtml, downloadDocumentHtmlAsPdf } from '../services/documentHtml'
 import type { DocumentWithDetails } from '../types/database'
 
 export default function PublicDocumentPage() {
@@ -15,6 +15,7 @@ export default function PublicDocumentPage() {
   const [html, setHtml] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [downloading, setDownloading] = useState(false)
 
   useEffect(() => {
     if (!slug) return
@@ -30,6 +31,16 @@ export default function PublicDocumentPage() {
       setLoading(false)
     })
   }, [slug])
+
+  const handleDownload = async () => {
+    if (!html || !doc) return
+    setDownloading(true)
+    try {
+      await downloadDocumentHtmlAsPdf(html, doc.document_number)
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   if (loading) return <div className="flex min-h-svh items-center justify-center"><PageLoader /></div>
   if (notFound || !doc) {
@@ -50,9 +61,11 @@ export default function PublicDocumentPage() {
           <Button
             variant="outline"
             className="text-xs"
-            onClick={() => html && printDocumentPdf(html, doc.document_number)}
+            disabled={downloading}
+            onClick={() => void handleDownload()}
           >
-            <Download className="h-3.5 w-3.5" /> Download PDF
+            <Download className="h-3.5 w-3.5" />
+            {downloading ? 'Downloading…' : 'Download PDF'}
           </Button>
           <Link to="/register"><Button className="text-xs">Create your own</Button></Link>
         </div>

@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { useAlertModal } from '../../hooks/useAlertModal'
 import { resetPassword } from '../../services/auth'
+import { authErrorMessage } from '../../utils/authError'
 
 export default function ForgotPasswordPage() {
   const { showSuccess, showError, AlertHost } = useAlertModal()
@@ -19,7 +20,14 @@ export default function ForgotPasswordPage() {
     const { error } = await resetPassword(email)
     setLoading(false)
     if (error) {
-      showError('Could not send reset link', error.message)
+      console.error('resetPassword failed', error)
+      showError(
+        'Could not send reset link',
+        authErrorMessage(
+          error,
+          'Email could not be sent. Check Supabase SMTP settings (Gmail app password, port 465 or 587) and Auth logs.',
+        ),
+      )
       return
     }
     setSent(true)

@@ -30,5 +30,7 @@ export const signatureBlockHtml = `<table style="width:100%; border-collapse:col
 </table>`;
 
 export const bankDetailsBlockHtml = `<div style="font-size:11px; color:#1F2937; line-height:1.6;">
-  Bank Transfer: {{bank_name}}, Account Name: {{account_name}}, Account No: {{account_number}}
+  Bank Transfer: {{bank_name}}<br/>
+  Account Name: {{account_name}}<br/>
+  Account No: {{account_number}}
 </div>`;

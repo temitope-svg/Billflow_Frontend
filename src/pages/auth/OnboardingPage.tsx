@@ -28,7 +28,7 @@ const SLIDES: Slide[] = [
   {
     key: '3',
     title: 'Share anywhere',
-    desc: 'Download PDF, share via WhatsApp, Gmail, or any app on your phone.',
+    desc: 'Download the PDF and share via WhatsApp, Gmail, or a public link.',
     image: onboarding3,
   },
 ]

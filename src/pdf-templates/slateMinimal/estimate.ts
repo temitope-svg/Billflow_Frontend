@@ -20,8 +20,7 @@ export const html = `<!DOCTYPE html>
           </div>
           <div style="font-size:12px; color:#64748B; margin-top:8px; line-height:1.7;">
             {{document_number}}<br/>
-            Issue date: {{issue_date}}<br/>
-            Valid Until: {{valid_until}}
+            Issue date: {{issue_date}}{{valid_until_line}}
           </div>
         </td>
       </tr>
@@ -32,10 +31,7 @@ export const html = `<!DOCTYPE html>
         <td style="vertical-align:top;">
           <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#1E293B; margin-bottom:6px;">Prepared For</div>
           <div style="font-size:13px; color:#1E293B; line-height:1.6; font-weight:400;">
-            {{client_name}}<br/>
-            {{client_address}}<br/>
-            {{client_email}}<br/>
-            {{client_phone}}
+            {{client_name}}{{client_address}}{{client_email}}{{client_phone}}
           </div>
         </td>
       </tr>

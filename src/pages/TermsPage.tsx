@@ -30,9 +30,10 @@ const content: Record<string, ReactNode> = {
   acceptance: (
     <>
       <p>
-        By creating a Billflow account or using the Billflow app, you agree to these Terms of Service
-        (&quot;Terms&quot;). Billflow is a mobile app for creating and managing business documents such as
-        estimates, invoices, and receipts. If you do not agree to these Terms, do not use the app.
+        By creating a Billflow account or using Billflow on web or mobile, you agree to these Terms of
+        Service (&quot;Terms&quot;). Billflow is a service for creating and managing business documents
+        such as estimates, invoices, and receipts. If you do not agree to these Terms, do not use
+        Billflow.
       </p>
       <p>
         These Terms form a binding agreement between you and TemiForge Studio (&quot;Billflow,&quot; &quot;we,&quot;
@@ -43,15 +44,15 @@ const content: Record<string, ReactNode> = {
   eligibility: (
     <p>
       You must be at least 18 years old, or the age of legal majority in your jurisdiction, to create
-      a Billflow account. By using the app, you confirm that you meet this requirement and that you
-      have the authority to act on behalf of any business you represent within the app.
+      a Billflow account. By using Billflow, you confirm that you meet this requirement and that you
+      have the authority to act on behalf of any business you represent within Billflow.
     </p>
   ),
   account: (
     <p>
       You are responsible for keeping your login credentials secure and for all activity that occurs
       under your account. You agree to provide accurate business and contact information when using
-      the app, and to keep that information up to date. Notify us immediately at{' '}
+      Billflow, and to keep that information up to date. Notify us immediately at{' '}
       <a href="mailto:support@billflow.app">support@billflow.app</a> if you suspect unauthorized access
       to your account.
     </p>
@@ -61,13 +62,13 @@ const content: Record<string, ReactNode> = {
       <p>
         You retain ownership of the documents, client data, and business information you store in Billflow
         (&quot;Your Content&quot;). You grant us a limited, non-exclusive license to host, process, store, and
-        display Your Content solely as needed to operate and provide the app&apos;s features to you.
+        display Your Content solely as needed to operate and provide Billflow&apos;s features to you.
       </p>
       <p>
         You are solely responsible for Your Content, including its accuracy and your right to collect and
         store any client or third-party information within it. As set out in our{' '}
         <Link to="/privacy">Privacy Policy</Link>, you act as the data controller for any client records
-        you enter into the app.
+        you enter into Billflow.
       </p>
     </>
   ),
@@ -79,8 +80,8 @@ const content: Record<string, ReactNode> = {
           'Violate any applicable law or regulation',
           'Create or send fraudulent, deceptive, or misleading invoices or estimates',
           'Upload content that infringes the intellectual property, privacy, or other rights of any third party',
-          'Attempt to gain unauthorized access to the app, other accounts, or our systems',
-          'Interfere with or disrupt the app\u2019s operation, including through malware, scraping, or excessive automated requests',
+          'Attempt to gain unauthorized access to Billflow, other accounts, or our systems',
+          'Interfere with or disrupt Billflow\u2019s operation, including through malware, scraping, or excessive automated requests',
         ]}
       />
       <p>
@@ -115,13 +116,13 @@ const content: Record<string, ReactNode> = {
     <p>
       Billflow, including its design, branding, and underlying software, is owned by TemiForge Studio
       and protected by intellectual property laws. These Terms do not grant you any rights to our
-      trademarks, logos, or app code beyond what&apos;s needed to use the app as intended.
+      trademarks, logos, or app code beyond what&apos;s needed to use Billflow as intended.
     </p>
   ),
   warranties: (
     <p>
       Billflow is provided &quot;as is&quot; and &quot;as available,&quot; without warranties of any kind, express or
-      implied. We do not warrant that the app will be error-free, secure, or fit for a particular
+      implied. We do not warrant that Billflow will be error-free, secure, or fit for a particular
       purpose, including compliance with tax, accounting, or invoicing regulations in your jurisdiction.
       You are responsible for verifying that documents generated through Billflow meet your local legal
       and regulatory requirements.
@@ -131,7 +132,7 @@ const content: Record<string, ReactNode> = {
     <p>
       To the maximum extent permitted by law, TemiForge Studio and Billflow will not be liable for any
       indirect, incidental, special, or consequential damages, including loss of revenue, data, or
-      business opportunities, arising from your use of the app. Our total liability for any claim
+      business opportunities, arising from your use of Billflow. Our total liability for any claim
       relating to Billflow will not exceed the amount you paid us, if any, in the 12 months preceding
       the claim.
     </p>
@@ -140,7 +141,7 @@ const content: Record<string, ReactNode> = {
     <p>
       You may delete your account at any time from Account Settings. We may suspend or terminate your
       access if you violate these Terms, misuse the service, or if required by law. Upon termination,
-      your right to use the app ends, though data deletion is handled per our{' '}
+      your right to use Billflow ends, though data deletion is handled per our{' '}
       <Link to="/privacy">Privacy Policy</Link>.
     </p>
   ),

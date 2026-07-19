@@ -27,7 +27,7 @@ const features = [
   {
     icon: Share2,
     title: 'Share anywhere',
-    desc: 'WhatsApp, Gmail, download, or a public link. Anyone can view without an account.',
+    desc: 'WhatsApp, Gmail, download, or a public link. Share the PDF with your client.',
   },
   {
     icon: PenLine,
@@ -37,12 +37,12 @@ const features = [
   {
     icon: LayoutTemplate,
     title: 'Professional templates',
-    desc: 'Multiple design styles per document type. Your logo and brand colors, every time.',
+    desc: 'Multiple design styles per document type. Your logo on every document.',
   },
   {
     icon: BarChart3,
     title: 'Track everything',
-    desc: 'Paid, overdue, and sent at a glance. Filter by status, type, or client.',
+    desc: 'Paid, overdue, and sent at a glance. Filter by type and search by client.',
   },
 ]
 
@@ -83,8 +83,8 @@ export default function LandingPage() {
           Create estimates, invoices and receipts — in seconds
         </h1>
         <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-slate-500">
-          Billflow handles your full billing flow from quote to receipt. Share PDFs via WhatsApp,
-          Gmail or any app. Web and mobile.
+          Billflow handles your full billing flow from quote to receipt. Download PDFs, share via
+          WhatsApp or Gmail, or send a public link. Web and mobile.
         </p>
         <div className="mt-6 flex justify-center gap-3">
           <Link to="/onboarding">

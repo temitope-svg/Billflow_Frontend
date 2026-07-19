@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { AppShell } from '../components/layout/AppShell'
+import { BackButton } from '../components/ui/BackButton'
 import { Button } from '../components/ui/Button'
 import { PageLoader } from '../components/ui/Spinner'
 import { getClient, getClientDocuments, deleteClient } from '../services/clients'
@@ -53,16 +54,17 @@ export default function ClientDetailPage() {
 
   return (
     <AppShell>
-      <Link to="/clients" className="mb-4 inline-flex items-center gap-2 text-sm text-slate-500">
-        <ArrowLeft className="h-4 w-4" /> Clients
-      </Link>
-      <div className="mb-4 flex items-start justify-between">
+      <BackButton fallback="/clients" label="Clients" />
+      <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold">{client.name}</h1>
           <p className="text-sm text-slate-500">{client.email ?? client.phone ?? 'No contact info'}</p>
           {client.address && <p className="mt-1 text-xs text-slate-400">{client.address}</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button className="text-xs" onClick={() => navigate(`/new?clientId=${id}`)}>
+            <Plus className="h-3.5 w-3.5" /> New document
+          </Button>
           <Button variant="outline" className="text-xs" onClick={() => navigate(`/clients/${id}/edit`)}>
             <Pencil className="h-3.5 w-3.5" /> Edit
           </Button>
@@ -72,7 +74,14 @@ export default function ClientDetailPage() {
         </div>
       </div>
 
-      <h2 className="mb-2 text-sm font-semibold">Documents</h2>
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-sm font-semibold">Documents</h2>
+        {docs.length === 0 && (
+          <Button variant="ghost" className="text-xs" onClick={() => navigate(`/new?clientId=${id}`)}>
+            <Plus className="h-3.5 w-3.5" /> Create one
+          </Button>
+        )}
+      </div>
       <div className="rounded-xl border border-slate-200 bg-white">
         {docs.length === 0 ? (
           <p className="p-6 text-center text-sm text-slate-400">No documents for this client</p>
